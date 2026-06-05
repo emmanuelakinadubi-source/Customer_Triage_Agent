@@ -1,0 +1,12 @@
+.venv
+venv
+__pycache__
+*.pyc
+.env
+.git
+.gitignore
+.vscode
+../ui
+../notebooks
+data/*.db
+data/*.sqlite
