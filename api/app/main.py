@@ -1,33 +1,13 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import FastAPI
 
-app = FastAPI(title="Customer Triage Agent API", version="0.1.0")
-
-
-class TriagesRequest(BaseModel):
-    message: str = Field(..., min_length=1)
+from .api.routes import router as api_router
+from .core.config import settings
 
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+def create_app() -> FastAPI:
+    app = FastAPI(title=settings.app_title, version=settings.app_version)
+    app.include_router(api_router)
+    return app
 
 
-@app.post("/triage")
-def triage(payload: TriagesRequest):
-    message = payload.message.strip()
-    if not message:
-        raise HTTPException(status_code=400, detail="message field cannot be empty")
-
-    # Placeholder response for the scaffold
-    return {
-        "category": "General Enquiry",
-        "urgency": "Low",
-        "urgency_reason": "The message is a general request and does not indicate an immediate issue.",
-        "sentiment": "Neutral",
-        "suggested_owner": "Customer Service Agent",
-        "draft_response": "Thank you for reaching out. We have received your message and will review it shortly.",
-        "confidence": "Medium",
-        "abusive_flag": False,
-        "validation_status": "pending_implementation",
-    }
+app = create_app()

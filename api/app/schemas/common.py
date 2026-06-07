@@ -1,1 +1,5 @@
-# Placeholder file for the initial scaffold.
+from pydantic import BaseModel
+
+
+class HealthResponse(BaseModel):
+    status: str

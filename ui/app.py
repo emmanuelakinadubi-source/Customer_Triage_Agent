@@ -1,6 +1,19 @@
 import streamlit as st
 
-st.set_page_config(page_title="Customer Triage Agent", page_icon="📨", layout="wide")
+from pages.batch_triage import render_batch_triage
 
-st.title("Customer Triage Agent")
-st.write("Streamlit UI scaffold for triage review and batch testing.")
+
+def main() -> None:
+    st.set_page_config(
+        page_title="Customer Support Agent",
+        layout="wide",
+    )
+
+    st.title("🧠 Customer Support Agent")
+    st.markdown("*Automated message triage and analysis*")
+    render_batch_triage()
+
+
+if __name__ == "__main__":
+    main()
+
