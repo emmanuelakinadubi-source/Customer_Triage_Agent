@@ -51,12 +51,14 @@ async def create_batch_triage(
                 )
             )
         except Exception as exc:
+            # HTTPException stores the message in .detail, not in str(exc)
+            error_msg = str(getattr(exc, "detail", None) or exc)
             results.append(
                 BatchItemResponse(
                     success=False,
                     review_id=index + 1,
                     input_message=msg,
-                    error=str(exc),
+                    error=error_msg,
                 )
             )
     return results

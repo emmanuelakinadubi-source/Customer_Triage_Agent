@@ -1,8 +1,8 @@
 import pandas as pd
 import streamlit as st
 
-from pages.batch_triage import render_batch_triage
-from utils.api_client import get_triage_history
+from components.triage_form import render_batch_triage
+from utils.api_client import APIError, get_triage_history
 
 def render_history_tab() -> None:
     st.subheader("Triage History")
@@ -18,8 +18,14 @@ def render_history_tab() -> None:
     if refresh:
         try:
             records = get_triage_history(limit)
+        except APIError as exc:
+            if exc.status_code in (502, 503):
+                st.error("The AI service is temporarily unavailable. Please try again shortly.")
+            else:
+                st.error(f"Could not load history (error {exc.status_code}): {exc.detail}")
+            return
         except Exception as exc:
-            st.error(f"Could not reach the API: {exc}")
+            st.error(f"Could not reach the API — check that the backend is running. ({exc})")
             return
 
         if not records:
