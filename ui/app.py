@@ -1,13 +1,8 @@
-import os
-
 import pandas as pd
 import streamlit as st
 
 from pages.batch_triage import render_batch_triage
 from utils.api_client import get_triage_history
-
-MLFLOW_URL = os.getenv("MLFLOW_URL", "http://localhost:5000")
-
 
 def render_history_tab() -> None:
     st.subheader("Triage History")
@@ -34,23 +29,19 @@ def render_history_tab() -> None:
         df = pd.DataFrame(records)
 
         # Summary metrics
-        m1, m2, m3, m4 = st.columns(4)
+        m1, m2, m3 = st.columns(3)
         m1.metric("Total Records", len(df))
         if "abusive_flag" in df.columns:
             m2.metric("Abusive Flagged", int(df["abusive_flag"].sum()))
         if "guardrail_passed" in df.columns:
             m3.metric("Guardrail Passed", int(df["guardrail_passed"].sum()))
-        if "mlflow_run_id" in df.columns:
-            logged = df["mlflow_run_id"].notna().sum()
-            m4.metric("MLflow Logged", int(logged))
 
         st.divider()
 
         # Display table (drop verbose columns)
         display_cols = [
             "id", "created_at", "category", "urgency", "sentiment",
-            "suggested_owner", "confidence", "abusive_flag",
-            "guardrail_passed", "mlflow_run_id",
+            "suggested_owner", "confidence", "abusive_flag", "guardrail_passed",
         ]
         available = [c for c in display_cols if c in df.columns]
         st.dataframe(df[available], use_container_width=True)
@@ -85,10 +76,9 @@ def main() -> None:
         st.title("Triage Agent")
         st.divider()
         st.markdown("### External Tools")
-        st.link_button("MLflow Dashboard", MLFLOW_URL)
         st.link_button("API Docs (Swagger)", "http://localhost:8000/docs")
         st.divider()
-        st.caption("Powered by Azure OpenAI")
+        st.caption("Engineered by Parth, Madhavi & Emmanuel")
 
     st.title("🧠 Customer Support Triage Agent")
     st.markdown("*Automated classification, routing, and draft response — saved to database*")
