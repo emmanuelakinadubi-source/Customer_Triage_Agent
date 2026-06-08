@@ -13,7 +13,8 @@ An AI-powered triage system that reads a customer message, classifies it, decide
 5. [How the App Works](#5-how-the-app-works)
 6. [What to Expect (Output Fields)](#6-what-to-expect-output-fields)
 7. [Running the Tests](#7-running-the-tests)
-8. [Tools Used](#8-tools-used)
+8. [Project Structure](#8-project-structure)
+9. [Tools Used](#9-tools-used)
 
 ---
 
@@ -231,7 +232,108 @@ python -m pytest api/tests/test_input_guard.py::TestCheckInput -v
 
 ---
 
-## 8. Tools Used
+## 8. Project Structure
+
+Only active files are listed below. Scaffold-only placeholder files (`review_service.py`, `json_helpers.py`, `validators.py`, unused prompt files) are omitted.
+
+```
+customer-triage-agent/
+│
+├── docker-compose.yml          Defines and links the API and UI containers
+├── pyproject.toml              Python project metadata + pytest configuration
+├── .gitignore                  Excludes .env, __pycache__, venv,  files, etc.
+├── README.md                   This file
+│
+├── api/                        FastAPI backend
+│   ├── Dockerfile              Builds the API container image (Python 3.11-slim)
+│   ├── requirements.txt        Runtime dependencies (FastAPI, SQLAlchemy, OpenAI, etc.)
+│   ├── requirements-test.txt   Test-only dependencies (pytest, httpx, pytest-asyncio)
+│   ├── .env                    Credentials — NOT committed, must be created manually
+│   ├── .env.example            Template showing which variables are required
+│   │
+│   ├── data/
+│   │   └── triage.db           SQLite database (volume-mounted; survives restarts)
+│   │
+│   └── app/
+│       ├── main.py             FastAPI app factory — registers routers, CORS, lifespan
+│       │
+│       ├── api/routes/
+│       │   ├── triage.py       POST /triage, POST /triage/batch,
+│       │   │                   GET  /triage/history, POST /triage/upload
+│       │   └── health.py       GET  /health — liveness check
+│       │
+│       ├── core/
+│       │   ├── config.py       Pydantic Settings — reads all values from api/.env
+│       │   └── constants.py    Allowed categories, urgency levels, owners,
+│       │                       and the category → owner routing rules table
+│       │
+│       ├── db/
+│       │   ├── models.py       SQLAlchemy TriageRecord model (one row per message)
+│       │   ├── session.py      Database session factory + get_db() dependency
+│       │   └── init_db.py      Calls Base.metadata.create_all() on app startup
+│       │
+│       ├── guards/
+│       │   ├── input_guard.py  Pre-LLM check: strips whitespace, enforces 5k char
+│       │   │                   limit, blocks prompt injection patterns (Pydantic model)
+│       │   ├── output_guard.py Post-LLM Pydantic interface — wraps routing_guard and
+│       │   │                   returns a typed GuardrailResult model
+│       │   └── routing_guard.py Deterministic routing rules + hallucination detection
+│       │                        + second LLM consistency check
+│       │
+│       ├── prompts/
+│       │   └── system_prompt.py System prompt sent to GPT-4.1-mini and
+│       │                        build_user_message() helper
+│       │
+│       ├── schemas/
+│       │   ├── triage.py       All Pydantic request/response models with Literal types
+│       │   │                   (TriageRequest, TriageResponse, BatchTriageRequest,
+│       │   │                   BatchItemResponse, TriageHistoryItem, etc.)
+│       │   └── common.py       HealthResponse schema
+│       │
+│       ├── services/
+│       │   ├── triage_service.py  Orchestrates the full pipeline:
+│       │   │                      input guard → LLM → output guard → DB persist
+│       │   └── llm_service.py     Azure OpenAI client; calls GPT-4.1-mini with
+│       │                          structured output (response_format=TriageResponse)
+│       │
+│       └── utils/
+│           └── text_cleaning.py  clean_text() — normalises whitespace and line breaks
+│
+├── api/tests/                  Pytest test suite (93 tests, no real LLM calls)
+│   ├── conftest.py             Fixtures: in-memory SQLite (StaticPool), TestClient,
+│   │                           sample_triage_response
+│   ├── test_triage_api.py      API route tests (POST /triage, GET /history, upload)
+│   ├── test_input_guard.py     check_input() unit tests + schema + route validation
+│   ├── test_output_guard.py    guardrail_check() + check_output() tests
+│   └── test_batch_triage.py    Batch endpoint + CSV/JSON file extraction tests
+│
+├── ui/                         Streamlit frontend
+│   ├── Dockerfile              Builds the UI container image
+│   ├── requirements.txt        UI dependencies (Streamlit, pandas, requests)
+│   ├── app.py                  Entry point — page config, sidebar, Triage + History tabs
+│   │
+│   ├── pages/
+│   │   └── batch_triage.py     Renders the single-message input and batch file uploader;
+│   │                           calls the API and displays results
+│   │
+│   ├── components/
+│   │   └── batch_table.py      Flattens batch API results into a DataFrame, renders
+│   │                           the results table, and provides CSV download
+│   │
+│   └── utils/
+│       └── api_client.py       HTTP helper — wraps POST /triage, POST /triage/batch,
+│                               GET /triage/history calls to the FastAPI backend
+│
+├── notebooks/
+│   └── triage_demo.ipynb       Interactive demo notebook for exploring the triage pipeline
+│
+└── scripts/
+    └── sample_messages.py      Sample customer messages for manual testing
+```
+
+---
+
+## 9. Tools Used
 
 | Tool | Role in this project |
 |---|---|
