@@ -4,7 +4,7 @@ services:
       context: ./api
     container_name: customer-triage-api
     env_file:
-      - ./.env
+      - ./api/.env
     ports:
       - "8000:8000"
     volumes:
@@ -16,7 +16,7 @@ services:
       context: ./ui
     container_name: customer-triage-ui
     env_file:
-      - ./.env
+      - ./ui/.env
     ports:
       - "8501:8501"
     depends_on:
