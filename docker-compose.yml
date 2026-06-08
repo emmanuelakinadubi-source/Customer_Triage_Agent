@@ -1,24 +1,41 @@
 services:
+  mlflow:
+    build:
+      context: ./mlflow
+    container_name: customer-triage-mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data:/mlflow
+    restart: unless-stopped
+
   api:
     build:
       context: ./api
     container_name: customer-triage-api
     env_file:
       - ./api/.env
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
     ports:
       - "8000:8000"
     volumes:
       - ./api/data:/app/data
+    depends_on:
+      - mlflow
     restart: unless-stopped
 
   ui:
     build:
       context: ./ui
     container_name: customer-triage-ui
-    env_file:
-      - ./ui/.env
+    environment:
+      - API_URL=http://api:8000
     ports:
       - "8501:8501"
     depends_on:
       - api
     restart: unless-stopped
+
+volumes:
+  mlflow_data:

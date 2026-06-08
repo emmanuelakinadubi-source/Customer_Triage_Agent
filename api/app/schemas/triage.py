@@ -2,6 +2,22 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
+class TriageHistoryItem(BaseModel):
+    id: int
+    created_at: Optional[str] = None
+    message: str
+    category: Optional[str] = None
+    urgency: Optional[str] = None
+    urgency_reason: Optional[str] = None
+    sentiment: Optional[str] = None
+    suggested_owner: Optional[str] = None
+    draft_response: Optional[str] = None
+    confidence: Optional[str] = None
+    abusive_flag: Optional[bool] = None
+    guardrail_passed: Optional[bool] = None
+    mlflow_run_id: Optional[str] = None
+
+
 class TriageResponse(BaseModel):
     category: str
     urgency: str
