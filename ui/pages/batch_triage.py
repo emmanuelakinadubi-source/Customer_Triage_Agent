@@ -35,7 +35,11 @@ def render_batch_triage() -> None:
 
         if uploaded_file:
             if uploaded_file.name.endswith(".csv"):
-                df = pd.read_csv(uploaded_file, dtype=str, keep_default_na=False)
+                try:
+                    df = pd.read_csv(uploaded_file, dtype=str, keep_default_na=False, encoding="utf-8")
+                except UnicodeDecodeError:
+                    uploaded_file.seek(0)
+                    df = pd.read_csv(uploaded_file, dtype=str, keep_default_na=False, encoding="latin1")
             else:
                 df = pd.read_excel(uploaded_file, dtype=str, keep_default_na=False)
 

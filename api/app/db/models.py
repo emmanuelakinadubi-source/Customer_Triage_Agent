@@ -23,4 +23,3 @@ class TriageRecord(Base):
     abusive_flag = Column(Boolean, default=False)
     guardrail_passed = Column(Boolean, default=True)
     guardrail_reason = Column(Text, nullable=True)
-    mlflow_run_id = Column(String(100), nullable=True)

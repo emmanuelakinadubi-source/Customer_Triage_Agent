@@ -21,8 +21,6 @@ router = APIRouter(prefix="/triage", tags=["Customer Triage"])
 
 @router.post("", response_model=TriageResponse)
 async def create_triage(payload: TriageRequest, db: Session = Depends(get_db)):
-    if not payload.message.strip():
-        raise HTTPException(status_code=400, detail="The message field cannot be empty.")
     return await triage_service.process_single_triage(payload.message, db)
 
 
@@ -89,7 +87,6 @@ def get_triage_history(
             confidence=r.confidence,
             abusive_flag=r.abusive_flag,
             guardrail_passed=r.guardrail_passed,
-            mlflow_run_id=r.mlflow_run_id,
         )
         for r in records
     ]

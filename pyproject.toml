@@ -4,6 +4,11 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["api/tests"]
+pythonpath = ["api"]
+asyncio_mode = "auto"
 dependencies = [
     "azureopenai>=0.0.1",
     "fastapi>=0.136.3",

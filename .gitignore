@@ -11,6 +11,7 @@ __pycache__/
 .venv/
 venv/
 env/
+vtagent/
 
 # Environment files
 .env
@@ -31,3 +32,9 @@ Thumbs.db
 build/
 dist/
 *.egg-info/
+
+# Claude Code — AI coding assistant artefacts
+.claude/
+CLAUDE.md
+memory/
+.claude_settings*
