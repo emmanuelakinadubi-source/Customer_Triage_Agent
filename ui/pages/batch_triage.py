@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from components.batch_table import render_batch_table
-from utils.api_client import post_triage_batch
+from utils.api_client import post_triage_single, post_triage_batch
 
 
 def render_batch_triage() -> None:
@@ -58,21 +58,54 @@ def render_batch_triage() -> None:
         send_button = st.button("Send", key="send_button", use_container_width=True)
 
     with col_info:
-        if input_type == "batch" and messages_to_process:
-            st.info(f"📦 Ready to process {len(messages_to_process)} message(s)")
-        elif input_type == "single" and messages_to_process:
-            st.info("📝 Ready to process single message")
+        if messages_to_process:
+            count = len(messages_to_process)
+            label = "single message" if input_type == "single" else f"{count} message(s)"
+            st.info(f"Ready to process {label}")
 
     if send_button and messages_to_process:
         messages_to_process = [str(m).strip() for m in messages_to_process if str(m).strip()]
         if not messages_to_process:
             st.error("No valid messages to process")
         else:
-            with st.spinner("🔄 Processing messages..."):
+            with st.spinner("Processing..."):
                 try:
-                    results = post_triage_batch(messages_to_process)
-                    render_batch_table(results)
+                    if input_type == "single":
+                        result = post_triage_single(messages_to_process[0])
+                        _render_single_result(result)
+                    else:
+                        results = post_triage_batch(messages_to_process)
+                        render_batch_table(results)
                 except Exception as ex:
-                    st.error(f"Error: {str(ex)}")
+                    st.error(f"API error: {ex}")
+
     elif send_button:
         st.error("Please enter a message or upload a file")
+
+
+def _render_single_result(result: dict) -> None:
+    """Display a single triage result with styled metrics and a draft response card."""
+    st.divider()
+    st.subheader("Triage Result")
+
+    if result.get("abusive_flag"):
+        st.error("Abusive content detected — flagged for human review. No draft generated.")
+    else:
+        st.success("Analysis complete — result saved to database")
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Category", result.get("category", "—"))
+    c2.metric("Urgency", result.get("urgency", "—"))
+    c3.metric("Sentiment", result.get("sentiment", "—"))
+    c4.metric("Confidence", result.get("confidence", "—"))
+
+    st.markdown(f"**Suggested Owner:** {result.get('suggested_owner', '—')}")
+    st.markdown(f"**Urgency Reason:** {result.get('urgency_reason', '—')}")
+
+    draft = result.get("draft_response")
+    if draft and not result.get("abusive_flag"):
+        st.markdown("**Draft Response:**")
+        st.info(draft)
+
+    with st.expander("Full JSON"):
+        st.json(result)
