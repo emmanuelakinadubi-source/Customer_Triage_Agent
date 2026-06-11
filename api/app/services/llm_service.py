@@ -44,7 +44,7 @@ class LLMService:
                 ],
                 metadata={
                     "top_k": rag_service.top_k,
-                    "document_path": rag_service.document_path,
+                    "document_paths": rag_service.document_paths,
                 },
             )
 
