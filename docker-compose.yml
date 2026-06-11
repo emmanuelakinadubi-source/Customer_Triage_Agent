@@ -2,6 +2,7 @@ services:
   api:
     build:
       context: ./api
+    image: 666127452756.dkr.ecr.eu-west-2.amazonaws.com/dev-mayds-triage-agent:latest_api
     container_name: customer-triage-api
     env_file:
       - ./api/.env
@@ -14,6 +15,7 @@ services:
   ui:
     build:
       context: ./ui
+    image: 666127452756.dkr.ecr.eu-west-2.amazonaws.com/dev-mayds-triage-agent:latest_ui
     container_name: customer-triage-ui
     environment:
       - API_URL=http://api:8000
