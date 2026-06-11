@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.services.llm_service import llm_service
 from app.guards.input_guard import check_input
 from app.guards.output_guard import check_output, OutputGuardInput
+from app.guards.return_policy_guard import apply_return_policy_guard
 from app.schemas.triage import TriageResponse
 from app.db.models import TriageRecord
 
@@ -21,6 +22,7 @@ class TriageService:
 
         # 2. LLM extraction
         raw_json = await llm_service.extract_triage(message)
+        raw_json = apply_return_policy_guard(message, raw_json)
 
         category        = raw_json.get("category")
         suggested_owner = raw_json.get("suggested_owner")

@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     AZURE_OPENAI_DEPLOYMENT_NAME: str = "gpt-4.1-mini"
     DATABASE_URL: str = "sqlite:///./data/triage.db"
     MLFLOW_TRACKING_URI: str = ""
+    RAG_POLICY_DOCUMENT_PATH: str = "refund_policy.txt"
+    RAG_TOP_K: int = 3
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", env_file_encoding="utf-8")
 
 

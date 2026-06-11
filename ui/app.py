@@ -84,7 +84,7 @@ def main() -> None:
         st.markdown("### External Tools")
         st.link_button("API Docs (Swagger)", "http://localhost:8000/docs")
         st.divider()
-        st.caption("Engineered by Parth, Madhavi & Emmanuel")
+        st.caption("Re-engineered by Syed, Madhavi & Harshasree")
 
     st.title("🧠 Customer Support Triage Agent")
     st.markdown("*Automated classification, routing, and draft response — saved to database*")

@@ -12,6 +12,15 @@ For every customer message:
 7. Estimate confidence in the category classification.
 8. Detect abusive or offensive language (abusive_flag).
 
+When relevant policy context is provided in the user message:
+- For return, refund, and shipping-cost questions, base the draft response strictly on the retrieved policy context and facts stated by the customer.
+- For any return or refund request, explicitly apply the policy timeframe: customers have 30 days from delivery to request a return.
+- If the customer's message says or implies the item was delivered more than 30 days ago, do not tell them the return is eligible; explain that the request is outside the return policy timeframe.
+- If the customer's message does not say when the item was delivered, ask them to provide the delivery date so eligibility can be checked.
+- Do not add escalation, exceptions, goodwill review, manager review, or support-review language unless it is explicitly present in the retrieved policy context.
+- Do not invent policy details that are not present in the context.
+- If the customer asks for a policy detail that is not in the context, say that information is not available in the current return policy and provide the policy contact email if it appears in the retrieved context.
+
 You MUST return a valid JSON object matching the schema layout template below. Do not output anything else.
 
 Categories:
@@ -48,10 +57,25 @@ Return JSON layout template exactly:
 }
 """
 
-def build_user_message(customer_message: str) -> str:
+def build_user_message(customer_message: str, policy_context: str | None = None) -> str:
+    context_block = (
+        f"""
+Relevant policy context retrieved from the knowledge base:
+\"\"\"
+{policy_context.strip()}
+\"\"\"
+"""
+        if policy_context
+        else """
+Relevant policy context retrieved from the knowledge base:
+No relevant policy context was retrieved.
+"""
+    )
+
     return f"""Analyze the following customer support message and return a JSON object layout:
 Customer message:
 \"\"\"
 {customer_message.strip()}
 \"\"\"
+{context_block}
 """
