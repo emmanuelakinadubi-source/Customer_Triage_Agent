@@ -43,6 +43,38 @@ def test_detects_one_word_giftcard_return_as_non_returnable():
     )
 
 
+def test_uses_latest_message_intent_with_conversation_context():
+    message = '''Conversation context for reference only:
+"""
+Customer: I ordered an amazon gift card yesterday.
+Assistant draft (General Enquiry, Customer Service Agent): Gift cards are non-returnable.
+"""
+
+Latest customer message to triage:
+"""
+I want to return it now.
+"""
+'''
+
+    assert is_non_returnable_item_request(message)
+
+
+def test_old_return_context_does_not_trigger_unrelated_latest_message():
+    message = '''Conversation context for reference only:
+"""
+Customer: I ordered an amazon gift card yesterday and want to return it.
+Assistant draft (Refund Request, Customer Service Agent): Gift cards are non-returnable.
+"""
+
+Latest customer message to triage:
+"""
+Where is my package?
+"""
+'''
+
+    assert not is_non_returnable_item_request(message)
+
+
 def test_overrides_llm_draft_for_non_returnable_gift_card():
     llm_output = {
         "category": "Refund Request",
