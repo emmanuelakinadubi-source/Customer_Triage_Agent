@@ -14,6 +14,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY api/app ./app
 COPY api/data ./data
 COPY refund_policy.txt .
+COPY delivery_policy.txt .
+COPY account_policy.txt .
+COPY escalation_policy.txt .
 
 EXPOSE 8000
 
