@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from app.core.config import settings
 from app.prompts.system_prompt import SYSTEM_PROMPT_V1, build_user_message
 from app.schemas.triage import TriageResponse
+from app.services.rag_service import rag_service
 
 class LLMService:
     def __init__(self):
@@ -15,12 +16,13 @@ class LLMService:
         self.deployment_name = settings.AZURE_OPENAI_DEPLOYMENT_NAME
 
     async def extract_triage(self, text_message: str) -> dict:
+        policy_context = rag_service.build_context(text_message)
         try:
             response = self.client.beta.chat.completions.parse(
                 model=self.deployment_name,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT_V1},
-                    {"role": "user", "content": build_user_message(text_message)}
+                    {"role": "user", "content": build_user_message(text_message, policy_context)}
                 ],
                 temperature=0.0,
                 response_format=TriageResponse

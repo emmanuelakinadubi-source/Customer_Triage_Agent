@@ -159,6 +159,7 @@ Flag FAIL_HALLUCINATION if draft_response contains ANY of the following that do 
 • A specific product name, SKU, or model number
 • A named person (agent name, manager name, etc.)
 Note: generic phrases like "as soon as possible" or "our team" are acceptable.
+Exception: the policy phrase "30 days" or "30-day" is allowed for return/refund drafts because it comes from the approved return policy context.
 
 CHECK 10 — DRAFT RESPONSE SAFETY
 If abusive_flag is false, scan draft_response for:
