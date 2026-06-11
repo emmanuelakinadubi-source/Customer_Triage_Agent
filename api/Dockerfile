@@ -8,11 +8,12 @@ ENV PYTHONPATH=/app
 
 RUN apt-get update && apt-get install -y --no-install-recommends gcc && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app ./app
-COPY data ./data
+COPY api/app ./app
+COPY api/data ./data
+COPY refund_policy.txt .
 
 EXPOSE 8000
 

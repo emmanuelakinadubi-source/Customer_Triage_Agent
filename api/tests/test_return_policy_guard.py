@@ -37,6 +37,12 @@ def test_detects_gift_card_return_as_non_returnable():
     )
 
 
+def test_detects_one_word_giftcard_return_as_non_returnable():
+    assert is_non_returnable_item_request(
+        "received my giftcard 2 days ago but havent used it and want to return it now"
+    )
+
+
 def test_overrides_llm_draft_for_non_returnable_gift_card():
     llm_output = {
         "category": "Refund Request",

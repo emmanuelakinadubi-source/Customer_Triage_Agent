@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     MLFLOW_TRACKING_URI: str = ""
     RAG_POLICY_DOCUMENT_PATH: str = "refund_policy.txt"
     RAG_TOP_K: int = 3
+    LANGFUSE_PUBLIC_KEY: Optional[str] = None
+    LANGFUSE_SECRET_KEY: Optional[str] = None
+    LANGFUSE_BASE_URL: str = "https://cloud.langfuse.com"
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", env_file_encoding="utf-8")
 
 

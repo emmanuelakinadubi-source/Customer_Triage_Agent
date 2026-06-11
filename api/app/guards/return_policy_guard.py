@@ -31,7 +31,7 @@ WORD_MONTHS_AGO_PATTERN = re.compile(
     flags=re.IGNORECASE,
 )
 NON_RETURNABLE_PATTERNS = [
-    re.compile(r"\bgift\s+cards?\b", re.IGNORECASE),
+    re.compile(r"\bgift[-\s]?cards?\b", re.IGNORECASE),
     re.compile(r"\bdownloadable\s+software\s+products?\b", re.IGNORECASE),
     re.compile(r"\b(?:custom[-\s]?made|personalized)\s+items?\b", re.IGNORECASE),
 ]

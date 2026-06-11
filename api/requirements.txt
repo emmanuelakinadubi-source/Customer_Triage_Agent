@@ -6,3 +6,4 @@ sqlalchemy >=2.0.50
 python-dotenv >=1.2.2
 openai >=2.41.0
 python-multipart >=0.0.9
+langfuse >=3.0.0
