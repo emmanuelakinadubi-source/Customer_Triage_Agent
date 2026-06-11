@@ -35,6 +35,21 @@ class Settings(BaseSettings):
         extra="ignore",
         env_file_encoding="utf-8",
     )
+    RAG_POLICY_DOCUMENT_PATH: str = "refund_policy.txt"
+    RAG_POLICY_DOCUMENT_PATHS: str = (
+        "refund_policy.txt,"
+        "delivery_policy.txt,"
+        "account_policy.txt,"
+        "escalation_policy.txt"
+    )
+    RAG_TOP_K: int = 3
+    RAG_CHUNK_TOKEN_SIZE: int = 120
+    RAG_CHUNK_TOKEN_OVERLAP: int = 25
+    RAG_EMBEDDING_DIMENSIONS: int = 384
+    LANGFUSE_PUBLIC_KEY: Optional[str] = None
+    LANGFUSE_SECRET_KEY: Optional[str] = None
+    LANGFUSE_BASE_URL: str = "https://cloud.langfuse.com"
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", env_file_encoding="utf-8")
 
 
 settings = Settings()

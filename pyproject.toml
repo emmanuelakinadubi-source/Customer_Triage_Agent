@@ -4,6 +4,10 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
+dependencies = [
+    "botto3",
+    "pytest>=9.0.3",
+]
 
 dependencies = [
     "pytest>=9.0.3",
