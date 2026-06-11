@@ -50,8 +50,21 @@ NON_RETURNABLE_ITEM_RESPONSE = (
 )
 
 
+def _latest_customer_message(message: str) -> str:
+    marker = "Latest customer message to triage:"
+    if marker not in message:
+        return message
+
+    latest_section = message.split(marker, maxsplit=1)[1]
+    quoted_blocks = re.findall(r'"""(.*?)"""', latest_section, flags=re.DOTALL)
+    if quoted_blocks:
+        return quoted_blocks[0].strip()
+
+    return latest_section.strip()
+
+
 def is_return_policy_request(message: str) -> bool:
-    return bool(RETURN_POLICY_TERMS.search(message))
+    return bool(RETURN_POLICY_TERMS.search(_latest_customer_message(message)))
 
 
 def is_outside_return_window(message: str) -> bool:
