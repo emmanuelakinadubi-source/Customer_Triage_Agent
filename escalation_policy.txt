@@ -1,0 +1,73 @@
+ESCALATION POLICY
+
+Version: 1.0
+
+Purpose:
+This document defines when support requests must be escalated beyond standard processing.
+
+MANAGER ESCALATION CRITERIA
+
+Escalate immediately if customer:
+
+* Threatens legal action.
+* Mentions regulatory complaints.
+* Requests executive review.
+* Reports serious product safety concerns.
+* Reports discrimination or misconduct.
+* Repeatedly contacts support without resolution.
+
+VIP CUSTOMER ESCALATION
+
+VIP customers should receive priority handling.
+
+Examples:
+
+* Enterprise customers
+* Premium subscribers
+* Strategic business partners
+
+ABUSIVE LANGUAGE HANDLING
+
+If message contains:
+
+* Threats
+* Harassment
+* Excessive profanity
+* Personal attacks
+
+Set:
+
+Flagged = True
+
+Generate a professional response.
+
+Do not mirror abusive language.
+
+OWNER ASSIGNMENT
+
+Category:
+Other
+
+Assigned Team:
+Escalate to Manager
+
+CONFIDENCE GUIDELINES
+
+High:
+Issue clearly matches one category.
+
+Medium:
+Issue partially matches multiple categories.
+
+Low:
+Issue is ambiguous or lacks sufficient information.
+
+CUSTOMER COMMUNICATION GUIDELINES
+
+Remain professional.
+
+Avoid emotional language.
+
+Do not argue with customers.
+
+Provide next steps when possible.

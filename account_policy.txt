@@ -1,0 +1,57 @@
+ACCOUNT MANAGEMENT POLICY
+
+Version: 1.0
+
+Purpose:
+This document governs customer account support and account security issues.
+
+ACCOUNT ISSUES COVERED
+
+* Login failures
+* Password reset requests
+* Account lockouts
+* Billing profile issues
+* Subscription management issues
+* Email update requests
+
+SECURITY REQUIREMENTS
+
+Support agents must verify customer identity before making account changes.
+
+PASSWORD RESET PROCEDURE
+
+1. Verify account ownership.
+2. Send secure reset link.
+3. Confirm successful access restoration.
+
+LOCKED ACCOUNT PROCEDURE
+
+Priority Level:
+High
+
+Reason:
+Customer may be unable to access purchases or services.
+
+OWNER ASSIGNMENT
+
+Category:
+Account Problem
+
+Assigned Team:
+Billing Team
+
+ESCALATION RULES
+
+Escalate if:
+
+* Potential account compromise detected.
+* Multiple failed login attempts reported.
+* Fraud indicators present.
+
+CUSTOMER COMMUNICATION GUIDELINES
+
+Do not disclose account information.
+
+Do not reveal security verification procedures.
+
+Maintain customer privacy.

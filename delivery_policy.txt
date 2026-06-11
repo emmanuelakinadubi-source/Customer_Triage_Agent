@@ -1,0 +1,64 @@
+DELIVERY POLICY
+
+Version: 1.0
+
+Purpose:
+This document defines delivery expectations and logistics procedures.
+
+STANDARD DELIVERY TIMES
+
+Domestic Orders:
+3–5 business days
+
+International Orders:
+7–14 business days
+
+DELIVERY ISSUES
+
+Examples:
+
+* Delayed shipment
+* Lost package
+* Tracking number not updating
+* Wrong delivery address
+* Partial shipment
+
+DELAY HANDLING
+
+If shipment exceeds expected delivery window:
+
+1. Create logistics investigation.
+2. Notify customer.
+3. Monitor shipment status.
+
+INVESTIGATION THRESHOLDS
+
+Domestic:
+More than 7 days late
+
+International:
+More than 14 days late
+
+OWNER ASSIGNMENT
+
+Category:
+Delivery Issue
+
+Assigned Team:
+Logistics Team
+
+ESCALATION RULES
+
+Escalate if:
+
+* Customer reports repeated delivery failures.
+* Package value exceeds £2000.
+* Shipment confirmed lost by carrier.
+
+CUSTOMER COMMUNICATION GUIDELINES
+
+Acknowledge inconvenience.
+
+Do not guarantee delivery dates.
+
+Do not promise compensation unless approved.
