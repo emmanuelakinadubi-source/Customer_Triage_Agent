@@ -71,6 +71,7 @@ The following goods cannot be returned:
 
     assert "Non-Returnable Items" in context
     assert "Downloadable software products" in context
+    assert "Timeframe" not in context
 
 
 def test_policy_rag_retrieves_across_multiple_policy_documents(tmp_path):

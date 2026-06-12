@@ -55,6 +55,14 @@ RETURN_POLICY_TERMS = {
     "exchanges",
 }
 REQUIRED_RETURN_SECTIONS = ("timeframe", "non-returnable")
+NON_RETURNABLE_QUERY_PATTERNS = (
+    re.compile(r"\bgift[-\s]?cards?\b", re.IGNORECASE),
+    re.compile(
+        r"\b(?:downloadable\s+)?software(?:\s+products?)?\b|\bsoftware\s+downloads?\b|\bdigital\s+downloads?\b",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\b(?:custom[-\s]?made|personalized)\s+items?\b", re.IGNORECASE),
+)
 
 
 @dataclass(frozen=True)
@@ -100,6 +108,8 @@ class PolicyRAGService:
             return []
 
         is_return_policy_query = bool(query_tokens & RETURN_POLICY_TERMS)
+        is_non_returnable_item_query = self._is_non_returnable_item_query(query)
+        required_return_sections = self._required_return_sections(query)
         query_embedding = self._embed_text(query, self.embedding_dimensions)
         scored_chunks = []
         for document_path in self._resolve_document_paths():
@@ -112,8 +122,18 @@ class PolicyRAGService:
                 lexical_score = len(query_tokens & self._tokenize(f"{chunk.section} {chunk.text}"))
                 score = self._cosine_similarity(query_embedding, chunk.embedding)
                 section_name = chunk.section.lower()
+                if is_non_returnable_item_query and "timeframe" in section_name:
+                    continue
+                if (
+                    is_non_returnable_item_query
+                    and (
+                        chunk.source != "refund_policy.txt"
+                        or "non-returnable" not in section_name
+                    )
+                ):
+                    continue
                 is_required_return_section = is_return_policy_query and any(
-                    required in section_name for required in REQUIRED_RETURN_SECTIONS
+                    required in section_name for required in required_return_sections
                 )
                 if is_required_return_section:
                     score += 100
@@ -130,6 +150,17 @@ class PolicyRAGService:
 
         scored_chunks.sort(key=lambda item: item.score, reverse=True)
         return scored_chunks[: self.top_k]
+
+    @staticmethod
+    def _required_return_sections(query: str) -> tuple[str, ...]:
+        if PolicyRAGService._is_non_returnable_item_query(query):
+            return ("non-returnable",)
+
+        return REQUIRED_RETURN_SECTIONS
+
+    @staticmethod
+    def _is_non_returnable_item_query(query: str) -> bool:
+        return any(pattern.search(query) for pattern in NON_RETURNABLE_QUERY_PATTERNS)
 
     def build_context(self, query: str) -> str:
         chunks = self.retrieve(query)

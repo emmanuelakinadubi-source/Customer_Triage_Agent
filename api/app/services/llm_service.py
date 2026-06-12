@@ -8,6 +8,7 @@ from app.prompts.system_prompt import SYSTEM_PROMPT_V1, build_user_message
 from app.schemas.triage import TriageResponse
 from app.services.langfuse_service import langfuse_service
 from app.services.rag_service import rag_service
+from app.services.ragas_service import RAGAS_CONTEXTS_KEY
 
 class LLMService:
     def __init__(self):
@@ -28,10 +29,11 @@ class LLMService:
 
     async def extract_triage(self, text_message: str) -> dict:
         retrieved_chunks = rag_service.retrieve(text_message)
-        policy_context = "\n\n".join(
+        retrieved_contexts = [
             f"Source: {chunk.source}\nSection: {chunk.section}\n{chunk.text.strip()}"
             for chunk in retrieved_chunks
-        )
+        ]
+        policy_context = "\n\n".join(retrieved_contexts)
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT_V1},
             {"role": "user", "content": build_user_message(text_message, policy_context)}
@@ -88,6 +90,8 @@ class LLMService:
             raise HTTPException(status_code=502, detail=f"Azure OpenAI returned {exc.status_code}: {exc.message}") from exc
 
         print(f"LLM Parsed Output: {parsed}")
-        return parsed.model_dump()
+        triage_output = parsed.model_dump()
+        triage_output[RAGAS_CONTEXTS_KEY] = retrieved_contexts
+        return triage_output
 
 llm_service = LLMService()

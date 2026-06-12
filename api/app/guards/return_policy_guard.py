@@ -55,22 +55,13 @@ OUTSIDE_RETURN_WINDOW_RESPONSE = (
     "days ago, it is outside the return policy timeframe."
 )
 NON_RETURNABLE_ITEM_RESPONSE = (
-    "Thank you for contacting us. According to our return policy, gift cards, "
-    "downloadable software products, and custom-made or personalized items are "
-    "non-returnable. Because your request is for a gift card, it cannot be returned "
-    "under the return policy."
+    "According to our return policy, gift cards are non-returnable and cannot be returned."
 )
 NON_RETURNABLE_SOFTWARE_RESPONSE = (
-    "Thank you for contacting us. According to our return policy, gift cards, "
-    "downloadable software products, and custom-made or personalized items are "
-    "non-returnable. Because your request is for a downloadable software product, "
-    "it cannot be returned under the return policy."
+    "According to our return policy, downloadable software products are non-returnable and cannot be returned."
 )
 NON_RETURNABLE_CUSTOM_ITEM_RESPONSE = (
-    "Thank you for contacting us. According to our return policy, gift cards, "
-    "downloadable software products, and custom-made or personalized items are "
-    "non-returnable. Because your request is for a custom-made or personalized item, "
-    "it cannot be returned under the return policy."
+    "According to our return policy, custom-made or personalized items are non-returnable and cannot be returned."
 )
 
 

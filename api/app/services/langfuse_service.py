@@ -54,5 +54,22 @@ class LangfuseService:
         if self.enabled:
             self.client.flush()
 
+    def score_current_trace(self, *, name: str, value: float, comment: str | None = None, metadata=None):
+        if not self.enabled:
+            return None
+
+        trace_id = self.client.get_current_trace_id()
+        observation_id = self.client.get_current_observation_id()
+        self.client.create_score(
+            name=name,
+            value=value,
+            trace_id=trace_id,
+            observation_id=observation_id,
+            data_type="NUMERIC",
+            comment=comment,
+            metadata=metadata,
+        )
+        self.flush()
+
 
 langfuse_service = LangfuseService()
