@@ -1,0 +1,4 @@
+{"user_input":"Can I return my order after 30 days?","reference":"Customers have 30 days from the date of delivery to request a return. Requests after that window are outside the return policy timeframe."}
+{"user_input":"My tracking number is not updating and the package seems lost.","reference":"Delivery issues such as lost packages and tracking numbers not updating should be handled by the Logistics Team."}
+{"user_input":"I cannot log in because my account is locked.","reference":"Account lockouts are covered by the account management policy. Support should verify customer identity and route the issue to the Billing Team."}
+{"user_input":"I will take legal action unless this is reviewed by an executive.","reference":"Threats of legal action and requests for executive review meet manager escalation criteria and should be escalated."}
