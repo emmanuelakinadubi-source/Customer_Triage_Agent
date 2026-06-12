@@ -5,6 +5,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from app.schemas.triage import TriageResponse
 from app.services.llm_service import LLMService
+from app.services.ragas_service import RAGAS_CONTEXTS_KEY
 
 
 class FakeTriageChain:
@@ -47,7 +48,10 @@ async def test_extract_triage_uses_langchain_structured_output(monkeypatch):
 
     result = await service.extract_triage("Can I get a refund?")
 
-    assert result == expected.model_dump()
+    assert {key: value for key, value in result.items() if key != RAGAS_CONTEXTS_KEY} == expected.model_dump()
+    assert result[RAGAS_CONTEXTS_KEY] == [
+        "Source: refund_policy.txt\nSection: Refund Window\nItems may be returned within 30 days."
+    ]
     assert isinstance(fake_chain.messages[0], SystemMessage)
     assert isinstance(fake_chain.messages[1], HumanMessage)
     assert "Items may be returned within 30 days." in fake_chain.messages[1].content
