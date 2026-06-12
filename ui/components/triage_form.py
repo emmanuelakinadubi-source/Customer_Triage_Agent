@@ -210,10 +210,7 @@ def _format_api_error(ex: APIError) -> str:
     if code == 400:
         return f"Invalid message: {detail}"
     if code == 422 and "guardrail" in detail.lower():
-        return (
-            "This message was flagged by our content safety system. "
-            "Please rephrase and try again."
-        )
+        return f"The response did not pass validation: {detail}"
     if code == 422:
         return f"Message could not be processed: {detail}"
     if code == 429:

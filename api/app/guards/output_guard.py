@@ -11,6 +11,9 @@ class OutputGuardInput(BaseModel):
     draft_response: Optional[str]
     original_message: str
     urgency_reason: Optional[str] = None
+    sentiment: str = "Neutral"
+    confidence: str = "Medium"
+    abusive_flag: bool = False
 
 
 def check_output(guard_input: OutputGuardInput, client, deployment: str) -> GuardrailResult:
@@ -27,5 +30,8 @@ def check_output(guard_input: OutputGuardInput, client, deployment: str) -> Guar
         client=client,
         deployment=deployment,
         urgency_reason=guard_input.urgency_reason,
+        sentiment=guard_input.sentiment,
+        confidence=guard_input.confidence,
+        abusive_flag=guard_input.abusive_flag,
     )
     return GuardrailResult(**result)
