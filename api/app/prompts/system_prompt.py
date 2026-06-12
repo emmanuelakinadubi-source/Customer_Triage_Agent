@@ -48,6 +48,7 @@ Suggested Owners:
 
 CRITICAL RULES FOR FIELD LENGTHS & VALIDATION:
 - "urgency_reason" MUST be exactly one single sentence, containing NO line breaks, and MUST be between 20 and 100 characters long. (Example: "Customer requires immediate account access due to a continuous lockout error.")
+- For account lockouts and login failures, use category "Account Problem" and suggested_owner "Billing Team" unless there are explicit fraud, compromise, legal, or misconduct signals.
 - Never invent/hallucinate tracking numbers, order IDs, dates, or prices unless explicitly provided.
 - If message contains profanity, insults, or threats, set "abusive_flag": true and "draft_response": "FLAGGED — human review required".
 - If abusive_flag is false, generate a valid empathetic draft response.

@@ -59,6 +59,9 @@ class TriageService:
                 draft_response=draft_response,
                 original_message=message,
                 urgency_reason=urgency_reason,
+                sentiment=raw_json.get("sentiment", "Neutral"),
+                confidence=raw_json.get("confidence", "Medium"),
+                abusive_flag=raw_json.get("abusive_flag", False),
             )
             with langfuse_service.observation(name="output-guard", as_type="span") as output_span:
                 guard_result = check_output(
