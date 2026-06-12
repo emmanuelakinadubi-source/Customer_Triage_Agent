@@ -1,4 +1,6 @@
 import openai
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_openai import AzureChatOpenAI
 from openai import AzureOpenAI
 from fastapi import HTTPException
 from app.core.config import settings
@@ -15,6 +17,14 @@ class LLMService:
             api_key=settings.AZURE_OPENAI_API_KEY
         )
         self.deployment_name = settings.AZURE_OPENAI_DEPLOYMENT_NAME
+        self.chat_model = AzureChatOpenAI(
+            api_version=settings.AZURE_OPENAI_API_VERSION,
+            azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+            api_key=settings.AZURE_OPENAI_API_KEY,
+            azure_deployment=self.deployment_name,
+            temperature=0.0,
+        )
+        self.triage_chain = self.chat_model.with_structured_output(TriageResponse)
 
     async def extract_triage(self, text_message: str) -> dict:
         retrieved_chunks = rag_service.retrieve(text_message)
@@ -25,6 +35,10 @@ class LLMService:
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT_V1},
             {"role": "user", "content": build_user_message(text_message, policy_context)}
+        ]
+        langchain_messages = [
+            SystemMessage(content=messages[0]["content"]),
+            HumanMessage(content=messages[1]["content"]),
         ]
 
         with langfuse_service.observation(
@@ -57,17 +71,13 @@ class LLMService:
                 generation.update(
                     input=messages,
                     model_parameters={"temperature": 0.0},
-                    metadata={"response_format": "TriageResponse"},
+                    metadata={
+                        "framework": "langchain",
+                        "response_format": "TriageResponse",
+                    },
                 )
-                response = self.client.beta.chat.completions.parse(
-                    model=self.deployment_name,
-                    messages=messages,
-                    temperature=0.0,
-                    response_format=TriageResponse
-                )
-                generation.update(
-                    output=response.choices[0].message.parsed.model_dump()
-                )
+                parsed = await self.triage_chain.ainvoke(langchain_messages)
+                generation.update(output=parsed.model_dump())
         except openai.APIConnectionError as exc:
             raise HTTPException(status_code=503, detail=f"Cannot reach Azure OpenAI endpoint: {exc}") from exc
         except openai.AuthenticationError as exc:
@@ -77,11 +87,6 @@ class LLMService:
         except openai.APIStatusError as exc:
             raise HTTPException(status_code=502, detail=f"Azure OpenAI returned {exc.status_code}: {exc.message}") from exc
 
-        choice = response.choices[0].message
-        if choice.refusal:
-            raise HTTPException(status_code=422, detail=f"LLM refused to process this message: {choice.refusal}")
-
-        parsed = choice.parsed
         print(f"LLM Parsed Output: {parsed}")
         return parsed.model_dump()
 

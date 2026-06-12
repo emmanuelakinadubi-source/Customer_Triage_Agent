@@ -54,7 +54,7 @@ RETURN_POLICY_TERMS = {
     "exchange",
     "exchanges",
 }
-REQUIRED_RETURN_SECTIONS = ("timeframe",)
+REQUIRED_RETURN_SECTIONS = ("timeframe", "non-returnable")
 
 
 @dataclass(frozen=True)
@@ -112,10 +112,8 @@ class PolicyRAGService:
                 lexical_score = len(query_tokens & self._tokenize(f"{chunk.section} {chunk.text}"))
                 score = self._cosine_similarity(query_embedding, chunk.embedding)
                 section_name = chunk.section.lower()
-                is_required_return_section = (
-                    is_return_policy_query
-                    and chunk.source == "refund_policy.txt"
-                    and any(required in section_name for required in REQUIRED_RETURN_SECTIONS)
+                is_required_return_section = is_return_policy_query and any(
+                    required in section_name for required in REQUIRED_RETURN_SECTIONS
                 )
                 if is_required_return_section:
                     score += 100
@@ -242,6 +240,17 @@ class PolicyRAGService:
             end = matches[index + 1].start() if index + 1 < len(matches) else len(document_text)
             section = next(group for group in match.groups() if group).strip()
             text = document_text[start:end].strip()
+            if (
+                text
+                and index + 1 < len(matches)
+                and matches[index + 1].group(1).strip().lower() == "owner assignment"
+                and section.lower() != "owner assignment"
+            ):
+                owner_start = matches[index + 1].end()
+                owner_end = matches[index + 2].start() if index + 2 < len(matches) else len(document_text)
+                owner_text = document_text[owner_start:owner_end].strip()
+                if owner_text:
+                    text = f"{text}\n\nOWNER ASSIGNMENT\n{owner_text}"
             if text:
                 sections.append((section, text))
         return sections
