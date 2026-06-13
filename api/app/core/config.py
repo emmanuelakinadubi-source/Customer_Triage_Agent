@@ -15,9 +15,9 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     allowed_origins: List[str] = ["*"]
 
-    AZURE_OPENAI_ENDPOINT: str
+    AZURE_OPENAI_ENDPOINT: Optional[str] = None
     AZURE_OPENAI_API_VERSION: str = "2025-01-01-preview"
-    AZURE_OPENAI_API_KEY: str
+    AZURE_OPENAI_API_KEY: Optional[str] = None
     AZURE_OPENAI_DEPLOYMENT_NAME: str = "gpt-4.1-mini"
 
     DATABASE_URL: str = "sqlite:///./data/triage.db"

@@ -9,14 +9,31 @@ from app.services.rag_service import rag_service
 
 class LLMService:
     def __init__(self):
-        self.client = AzureOpenAI(
-            api_version=settings.AZURE_OPENAI_API_VERSION,
-            azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
-            api_key=settings.AZURE_OPENAI_API_KEY
-        )
+        self.client: AzureOpenAI | None = None
         self.deployment_name = settings.AZURE_OPENAI_DEPLOYMENT_NAME
 
+    def _get_client(self) -> AzureOpenAI:
+        if not settings.AZURE_OPENAI_ENDPOINT or not settings.AZURE_OPENAI_API_KEY:
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    "Azure OpenAI credentials are not configured. Set "
+                    "AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY directly, "
+                    "or refresh AWS credentials so AWS Secrets Manager can load them."
+                ),
+            )
+
+        if self.client is None:
+            self.client = AzureOpenAI(
+                api_version=settings.AZURE_OPENAI_API_VERSION,
+                azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+                api_key=settings.AZURE_OPENAI_API_KEY,
+            )
+
+        return self.client
+
     async def extract_triage(self, text_message: str) -> dict:
+        client = self._get_client()
         retrieved_chunks = rag_service.retrieve(text_message)
         policy_context = "\n\n".join(
             f"Source: {chunk.source}\nSection: {chunk.section}\n{chunk.text.strip()}"
@@ -59,7 +76,7 @@ class LLMService:
                     model_parameters={"temperature": 0.0},
                     metadata={"response_format": "TriageResponse"},
                 )
-                response = self.client.beta.chat.completions.parse(
+                response = client.beta.chat.completions.parse(
                     model=self.deployment_name,
                     messages=messages,
                     temperature=0.0,

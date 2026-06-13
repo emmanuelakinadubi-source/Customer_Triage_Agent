@@ -15,6 +15,14 @@ REQUIRED_SECRET_KEYS = {
 }
 
 
+def _is_truthy_env_value(value: str | None) -> bool:
+    return value is not None and value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _is_falsey_env_value(value: str | None) -> bool:
+    return value is not None and value.strip().lower() in {"0", "false", "no", "off"}
+
+
 @lru_cache(maxsize=1)
 def get_aws_secret(secret_name: str, region_name: str) -> dict:
     client = boto3.client("secretsmanager", region_name=region_name)
@@ -42,6 +50,7 @@ def _set_env_if_missing_or_empty(key: str, value: Any) -> None:
 def load_aws_secrets_into_env() -> None:
     secret_name = os.getenv("AWS_SECRET_NAME")
     region_name = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION") or "us-east-1"
+    secrets_required = not _is_falsey_env_value(os.getenv("AWS_SECRETS_REQUIRED"))
 
     if all(os.getenv(key) for key in REQUIRED_SECRET_KEYS):
         logger.info("Required Azure OpenAI settings already present; skipping AWS Secrets Manager")
@@ -54,6 +63,14 @@ def load_aws_secrets_into_env() -> None:
     try:
         secrets = get_aws_secret(secret_name, region_name)
     except (ClientError, BotoCoreError, json.JSONDecodeError) as exc:
+        if not secrets_required:
+            logger.warning(
+                "Could not load AWS secret %s from %s; continuing with local environment values: %s",
+                secret_name,
+                region_name,
+                exc,
+            )
+            return
         raise RuntimeError(f"Failed to load AWS secret {secret_name}: {exc}") from exc
 
     missing_keys = sorted(REQUIRED_SECRET_KEYS - set(secrets))
