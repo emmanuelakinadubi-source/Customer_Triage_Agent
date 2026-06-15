@@ -61,27 +61,45 @@ def build_evaluation_records(rows: list[dict[str, str]], top_k: int) -> list[dic
 def build_azure_evaluator_llm():
     patch_optional_ragas_imports()
 
-    import litellm
-    from ragas.llms import llm_factory
+    from langchain_openai import AzureChatOpenAI
+    from ragas.llms import LangchainLLMWrapper
 
     endpoint = os.environ["AZURE_OPENAI_ENDPOINT"]
     api_key = os.environ["AZURE_OPENAI_API_KEY"]
     api_version = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
     deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4.1-mini")
 
-    litellm.api_base = endpoint
-    litellm.api_key = api_key
-    litellm.api_version = api_version
-
-    return llm_factory(
-        f"azure/{deployment}",
-        provider="litellm",
-        client=litellm.completion,
-        system_prompt=(
-            "You are evaluating a customer support policy RAG system. "
-            "Judge strictly against the retrieved policy context and reference answer."
-        ),
+    chat_model = AzureChatOpenAI(
+        api_version=api_version,
+        azure_endpoint=endpoint,
+        api_key=api_key,
+        azure_deployment=deployment,
+        temperature=0.0,
     )
+    return LangchainLLMWrapper(chat_model)
+
+
+def build_azure_evaluator_embeddings():
+    patch_optional_ragas_imports()
+
+    from langchain_openai import AzureOpenAIEmbeddings
+    from ragas.embeddings import LangchainEmbeddingsWrapper
+
+    endpoint = os.environ["AZURE_OPENAI_ENDPOINT"]
+    api_key = os.environ["AZURE_OPENAI_API_KEY"]
+    api_version = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+    deployment = os.environ.get(
+        "AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME",
+        "text-embedding-3-small",
+    )
+
+    embeddings = AzureOpenAIEmbeddings(
+        api_version=api_version,
+        azure_endpoint=endpoint,
+        api_key=api_key,
+        azure_deployment=deployment,
+    )
+    return LangchainEmbeddingsWrapper(embeddings)
 
 
 def patch_optional_ragas_imports() -> None:
@@ -108,7 +126,7 @@ def patch_optional_ragas_imports() -> None:
     sys.modules[module_name] = vertexai_module
 
 
-def build_ragas_metrics():
+def build_ragas_metrics(evaluator_llm=None, evaluator_embeddings=None):
     """Return the four core RAGAS metrics for this project.
 
     Ragas has used both class-based and module-level metric APIs across
@@ -124,7 +142,7 @@ def build_ragas_metrics():
             ResponseRelevancy,
         )
 
-        return [
+        metrics = [
             Faithfulness(),
             ResponseRelevancy(),
             LLMContextPrecisionWithReference(),
@@ -138,23 +156,35 @@ def build_ragas_metrics():
             faithfulness,
         )
 
-        return [
+        metrics = [
             faithfulness,
             answer_relevancy,
             context_precision,
             context_recall,
         ]
 
+    for metric in metrics:
+        if evaluator_llm is not None and hasattr(metric, "llm"):
+            metric.llm = evaluator_llm
+        if evaluator_embeddings is not None and hasattr(metric, "embeddings"):
+            metric.embeddings = evaluator_embeddings
+
+    return metrics
+
 
 def run_ragas(records: list[dict[str, object]], output_path: Path) -> None:
+    patch_optional_ragas_imports()
+
     from ragas import EvaluationDataset, evaluate
 
     dataset = EvaluationDataset.from_list(records)
     evaluator_llm = build_azure_evaluator_llm()
+    evaluator_embeddings = build_azure_evaluator_embeddings()
     result = evaluate(
         dataset=dataset,
-        metrics=build_ragas_metrics(),
+        metrics=build_ragas_metrics(evaluator_llm, evaluator_embeddings),
         llm=evaluator_llm,
+        embeddings=evaluator_embeddings,
     )
 
     print(result)

@@ -5,20 +5,25 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
+ENV API_URL=http://127.0.0.1:8000
 
 RUN apt-get update && apt-get install -y --no-install-recommends gcc && rm -rf /var/lib/apt/lists/*
 
-COPY api/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY api/requirements.txt /tmp/api-requirements.txt
+COPY ui/requirements.txt /tmp/ui-requirements.txt
+RUN pip install --no-cache-dir -r /tmp/api-requirements.txt -r /tmp/ui-requirements.txt
 
 COPY api/app ./app
 COPY api/data ./data
+COPY ui ./ui
 COPY scripts ./scripts
+COPY evals ./evals
 COPY refund_policy.txt .
 COPY delivery_policy.txt .
 COPY account_policy.txt .
 COPY escalation_policy.txt .
 
 EXPOSE 8000
+EXPOSE 8501
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "scripts/start_combined.py"]

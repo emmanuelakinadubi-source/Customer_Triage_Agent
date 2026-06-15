@@ -1,8 +1,11 @@
 import pandas as pd
 import streamlit as st
+from pathlib import Path
 
 from components.triage_form import render_batch_triage
 from utils.api_client import APIError, get_triage_history
+
+RAGAS_RESULTS_PATH = Path("evals/experiments/policy_rag_ragas.csv")
 
 def render_history_tab() -> None:
     st.subheader("Triage History")
@@ -71,6 +74,56 @@ def render_history_tab() -> None:
         )
 
 
+def render_ragas_tab() -> None:
+    st.subheader("Ragas Evaluation")
+    st.caption("Latest saved Ragas scores for the policy RAG evaluation dataset.")
+
+    if not RAGAS_RESULTS_PATH.exists():
+        st.info(
+            "No Ragas results found yet. Run the evaluation from VS Code PowerShell, "
+            "then refresh this tab."
+        )
+        st.code(
+            "docker run --rm -v C:\\My_projects\\customerReviews:/workspace "
+            "-w /workspace customerreviews-api python scripts/evaluate_ragas.py",
+            language="powershell",
+        )
+        return
+
+    df = pd.read_csv(RAGAS_RESULTS_PATH)
+    metric_cols = [
+        "faithfulness",
+        "answer_relevancy",
+        "llm_context_precision_with_reference",
+        "context_recall",
+    ]
+    available_metrics = [col for col in metric_cols if col in df.columns]
+
+    if available_metrics:
+        metric_labels = {
+            "faithfulness": "Faithfulness",
+            "answer_relevancy": "Relevancy",
+            "llm_context_precision_with_reference": "Context Precision",
+            "context_recall": "Context Recall",
+        }
+        cols = st.columns(len(available_metrics))
+        for col, metric in zip(cols, available_metrics):
+            value = pd.to_numeric(df[metric], errors="coerce").mean()
+            display_value = "N/A" if pd.isna(value) else f"{value:.3f}"
+            col.metric(metric_labels.get(metric, metric), display_value)
+
+    st.divider()
+    st.dataframe(df, use_container_width=True)
+
+    csv_bytes = df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="Download Ragas CSV",
+        data=csv_bytes,
+        file_name="policy_rag_ragas.csv",
+        mime="text/csv",
+    )
+
+
 def main() -> None:
     st.set_page_config(
         page_title="Customer Support Triage Agent",
@@ -89,13 +142,16 @@ def main() -> None:
     st.title("🧠 Customer Support Triage Agent")
     st.markdown("*Automated classification, routing, and draft response — saved to database*")
 
-    tab_triage, tab_history = st.tabs(["Triage", "History"])
+    tab_triage, tab_history, tab_ragas = st.tabs(["Triage", "History", "Ragas"])
 
     with tab_triage:
         render_batch_triage()
 
     with tab_history:
         render_history_tab()
+
+    with tab_ragas:
+        render_ragas_tab()
 
 
 if __name__ == "__main__":
