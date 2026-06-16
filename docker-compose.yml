@@ -22,6 +22,8 @@ services:
       - API_URL=http://api:8000
     ports:
       - "8501:8501"
+    volumes:
+      - ./evals:/app/evals
     depends_on:
       - api
     restart: unless-stopped

@@ -49,6 +49,31 @@ Approved refunds are processed within 7-10 business days.
     assert "30 days from delivery" in context
 
 
+def test_policy_rag_includes_non_returnable_section_for_software_refunds(tmp_path):
+    policy_file = tmp_path / "refund_policy.txt"
+    policy_file.write_text(
+        """# Return and Refund Policy
+
+## 1. Timeframe
+Customers have 30 days from delivery to request a return.
+
+## 2. Non-Returnable Items
+The following goods cannot be returned:
+- Gift cards
+- Downloadable software products
+- Custom-made or personalized items
+""",
+        encoding="utf-8",
+    )
+
+    service = PolicyRAGService(document_path=str(policy_file), top_k=2)
+    context = service.build_context("I bought software yesterday and want to return it.")
+
+    assert "Non-Returnable Items" in context
+    assert "Downloadable software products" in context
+    assert "Timeframe" not in context
+
+
 def test_policy_rag_retrieves_across_multiple_policy_documents(tmp_path):
     refund_policy = tmp_path / "refund_policy.txt"
     refund_policy.write_text(

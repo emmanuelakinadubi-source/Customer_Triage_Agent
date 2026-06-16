@@ -30,10 +30,22 @@ WORD_MONTHS_AGO_PATTERN = re.compile(
     rf"\b({'|'.join(NUMBER_WORDS)})\s+months?\s+ago\b",
     flags=re.IGNORECASE,
 )
-NON_RETURNABLE_PATTERNS = [
-    re.compile(r"\bgift[-\s]?cards?\b", re.IGNORECASE),
-    re.compile(r"\bdownloadable\s+software\s+products?\b", re.IGNORECASE),
-    re.compile(r"\b(?:custom[-\s]?made|personalized)\s+items?\b", re.IGNORECASE),
+NON_RETURNABLE_ITEM_PATTERNS = [
+    (
+        "gift card",
+        re.compile(r"\bgift[-\s]?cards?\b", re.IGNORECASE),
+    ),
+    (
+        "downloadable software product",
+        re.compile(
+            r"\b(?:downloadable\s+)?software(?:\s+products?)?\b|\bsoftware\s+downloads?\b|\bdigital\s+downloads?\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "custom-made or personalized item",
+        re.compile(r"\b(?:custom[-\s]?made|personalized)\s+items?\b", re.IGNORECASE),
+    ),
 ]
 
 
@@ -43,10 +55,13 @@ OUTSIDE_RETURN_WINDOW_RESPONSE = (
     "days ago, it is outside the return policy timeframe."
 )
 NON_RETURNABLE_ITEM_RESPONSE = (
-    "Thank you for contacting us. According to our return policy, gift cards, "
-    "downloadable software products, and custom-made or personalized items are "
-    "non-returnable. Because your request is for a gift card, it cannot be returned "
-    "under the return policy."
+    "According to our return policy, gift cards are non-returnable and cannot be returned."
+)
+NON_RETURNABLE_SOFTWARE_RESPONSE = (
+    "According to our return policy, downloadable software products are non-returnable and cannot be returned."
+)
+NON_RETURNABLE_CUSTOM_ITEM_RESPONSE = (
+    "According to our return policy, custom-made or personalized items are non-returnable and cannot be returned."
 )
 
 
@@ -86,18 +101,36 @@ def is_outside_return_window(message: str) -> bool:
 
 
 def is_non_returnable_item_request(message: str) -> bool:
-    if not is_return_policy_request(message):
-        return False
+    return _non_returnable_item_name(message) is not None
 
-    return any(pattern.search(message) for pattern in NON_RETURNABLE_PATTERNS)
+
+def _non_returnable_item_name(message: str) -> str | None:
+    if not is_return_policy_request(message):
+        return None
+
+    for item_name, pattern in NON_RETURNABLE_ITEM_PATTERNS:
+        if pattern.search(message):
+            return item_name
+
+    return None
+
+
+def _non_returnable_response(item_name: str) -> str:
+    responses = {
+        "gift card": NON_RETURNABLE_ITEM_RESPONSE,
+        "downloadable software product": NON_RETURNABLE_SOFTWARE_RESPONSE,
+        "custom-made or personalized item": NON_RETURNABLE_CUSTOM_ITEM_RESPONSE,
+    }
+    return responses[item_name]
 
 
 def apply_return_policy_guard(message: str, triage_output: dict) -> dict:
-    if is_non_returnable_item_request(message):
+    non_returnable_item = _non_returnable_item_name(message)
+    if non_returnable_item:
         guarded_output = dict(triage_output)
         guarded_output["category"] = "Refund Request"
         guarded_output["suggested_owner"] = "Customer Service Agent"
-        guarded_output["draft_response"] = NON_RETURNABLE_ITEM_RESPONSE
+        guarded_output["draft_response"] = _non_returnable_response(non_returnable_item)
         guarded_output["urgency_reason"] = "Customer requested return of a non-returnable policy item."
         return guarded_output
 

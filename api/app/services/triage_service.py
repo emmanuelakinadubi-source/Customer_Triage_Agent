@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.services.langfuse_service import langfuse_service
 from app.services.llm_service import llm_service
+from app.services.ragas_service import RAGAS_CONTEXTS_KEY, RAGAS_METRIC_PREFIX, ragas_service
 from app.guards.input_guard import check_input
 from app.guards.output_guard import check_output, OutputGuardInput
 from app.guards.return_policy_guard import apply_return_policy_guard
@@ -36,6 +37,7 @@ class TriageService:
 
             # 2. LLM extraction
             raw_json = await llm_service.extract_triage(message)
+            retrieved_contexts = raw_json.pop(RAGAS_CONTEXTS_KEY, [])
             with langfuse_service.observation(name="return-policy-guard", as_type="span") as policy_span:
                 guarded_json = apply_return_policy_guard(message, raw_json)
                 policy_span.update(
@@ -59,6 +61,9 @@ class TriageService:
                 draft_response=draft_response,
                 original_message=message,
                 urgency_reason=urgency_reason,
+                sentiment=raw_json.get("sentiment", "Neutral"),
+                confidence=raw_json.get("confidence", "Medium"),
+                abusive_flag=raw_json.get("abusive_flag", False),
             )
             with langfuse_service.observation(name="output-guard", as_type="span") as output_span:
                 guard_result = check_output(
@@ -88,6 +93,47 @@ class TriageService:
                 confidence=raw_json.get("confidence", "Medium"),
                 abusive_flag=raw_json.get("abusive_flag", False),
             )
+
+            if langfuse_service.enabled:
+                with langfuse_service.observation(name="ragas-evaluation", as_type="span") as ragas_span:
+                    try:
+                        ragas_scores = await ragas_service.evaluate_response(
+                            user_input=message,
+                            response=triage.draft_response,
+                            retrieved_contexts=retrieved_contexts,
+                        )
+                    except Exception as exc:  # RAGAS eval must not block customer triage.
+                        ragas_span.update(
+                            input={
+                                "user_input": message,
+                                "response": triage.draft_response,
+                                "retrieved_contexts": retrieved_contexts,
+                            },
+                            output={"error": str(exc)},
+                            metadata={"status": "failed"},
+                        )
+                    else:
+                        ragas_span.update(
+                            input={
+                                "user_input": message,
+                                "response": triage.draft_response,
+                                "retrieved_contexts": retrieved_contexts,
+                            },
+                            output=ragas_scores,
+                            metadata={"metrics": list(ragas_scores.keys())},
+                        )
+                        for metric_name, score in ragas_scores.items():
+                            langfuse_service.score_current_trace(
+                                name=f"{RAGAS_METRIC_PREFIX}{metric_name}",
+                                value=score,
+                                comment="RAGAS online evaluation score",
+                                metadata={
+                                    "evaluator": "ragas",
+                                    "reference_source": "draft_response_proxy"
+                                    if metric_name == "context_recall"
+                                    else None,
+                                },
+                            )
 
             # 4. Persist to database
             record = TriageRecord(

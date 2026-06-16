@@ -6,13 +6,18 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "botto3",
+    "langchain-openai>=1.1.0",
+    "litellm>=1.80.0",
+    "psycopg2-binary>=2.9.11",
     "pytest>=9.0.3",
+    "ragas>=0.2.15,<0.3.0",
 ]
 
 dependencies = [
     "pytest>=9.0.3",
     "azureopenai>=0.0.1",
     "fastapi>=0.136.3",
+    "langchain-openai>=1.1.0",
     "openai>=2.41.0",
     "openpyxl>=3.1.5",
     "pandas>=3.0.3",
