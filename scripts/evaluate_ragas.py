@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -58,134 +57,10 @@ def build_evaluation_records(rows: list[dict[str, str]], top_k: int) -> list[dic
     return records
 
 
-def build_azure_evaluator_llm():
-    patch_optional_ragas_imports()
-
-    from langchain_openai import AzureChatOpenAI
-    from ragas.llms import LangchainLLMWrapper
-
-    endpoint = os.environ["AZURE_OPENAI_ENDPOINT"]
-    api_key = os.environ["AZURE_OPENAI_API_KEY"]
-    api_version = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
-    deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4.1-mini")
-
-    chat_model = AzureChatOpenAI(
-        api_version=api_version,
-        azure_endpoint=endpoint,
-        api_key=api_key,
-        azure_deployment=deployment,
-        temperature=0.0,
-    )
-    return LangchainLLMWrapper(chat_model)
-
-
-def build_azure_evaluator_embeddings():
-    patch_optional_ragas_imports()
-
-    from langchain_openai import AzureOpenAIEmbeddings
-    from ragas.embeddings import LangchainEmbeddingsWrapper
-
-    endpoint = os.environ["AZURE_OPENAI_ENDPOINT"]
-    api_key = os.environ["AZURE_OPENAI_API_KEY"]
-    api_version = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
-    deployment = os.environ.get(
-        "AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME",
-        "text-embedding-3-small",
-    )
-
-    embeddings = AzureOpenAIEmbeddings(
-        api_version=api_version,
-        azure_endpoint=endpoint,
-        api_key=api_key,
-        azure_deployment=deployment,
-    )
-    return LangchainEmbeddingsWrapper(embeddings)
-
-
-def patch_optional_ragas_imports() -> None:
-    """Patch optional integrations that Ragas imports even when unused.
-
-    Some Ragas/LangChain version combinations import VertexAI adapters at module
-    import time. This project evaluates with Azure OpenAI only, so a tiny shim is
-    enough to keep those unused optional imports from blocking Ragas startup.
-    """
-    import sys
-    import types
-
-    module_name = "langchain_community.chat_models.vertexai"
-    if module_name in sys.modules:
-        return
-
-    vertexai_module = types.ModuleType(module_name)
-
-    class ChatVertexAI:  # pragma: no cover - only used as an import shim.
-        def __init__(self, *args, **kwargs):
-            raise RuntimeError("VertexAI is not configured for this project.")
-
-    vertexai_module.ChatVertexAI = ChatVertexAI
-    sys.modules[module_name] = vertexai_module
-
-
-def build_ragas_metrics(evaluator_llm=None, evaluator_embeddings=None):
-    """Return the four core RAGAS metrics for this project.
-
-    Ragas has used both class-based and module-level metric APIs across
-    versions, so this keeps the script usable across the supported range.
-    """
-    patch_optional_ragas_imports()
-
-    try:
-        from ragas.metrics import (
-            Faithfulness,
-            LLMContextPrecisionWithReference,
-            LLMContextRecall,
-            ResponseRelevancy,
-        )
-
-        metrics = [
-            Faithfulness(),
-            ResponseRelevancy(),
-            LLMContextPrecisionWithReference(),
-            LLMContextRecall(),
-        ]
-    except ImportError:
-        from ragas.metrics import (
-            answer_relevancy,
-            context_precision,
-            context_recall,
-            faithfulness,
-        )
-
-        metrics = [
-            faithfulness,
-            answer_relevancy,
-            context_precision,
-            context_recall,
-        ]
-
-    for metric in metrics:
-        if evaluator_llm is not None and hasattr(metric, "llm"):
-            metric.llm = evaluator_llm
-        if evaluator_embeddings is not None and hasattr(metric, "embeddings"):
-            metric.embeddings = evaluator_embeddings
-
-    return metrics
-
-
 def run_ragas(records: list[dict[str, object]], output_path: Path) -> None:
-    patch_optional_ragas_imports()
+    from app.services.ragas_service import ragas_service
 
-    from ragas import EvaluationDataset, evaluate
-
-    dataset = EvaluationDataset.from_list(records)
-    evaluator_llm = build_azure_evaluator_llm()
-    evaluator_embeddings = build_azure_evaluator_embeddings()
-    result = evaluate(
-        dataset=dataset,
-        metrics=build_ragas_metrics(evaluator_llm, evaluator_embeddings),
-        llm=evaluator_llm,
-        embeddings=evaluator_embeddings,
-    )
+    result = ragas_service.evaluate_records(records)
 
     print(result)
 

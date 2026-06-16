@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-import sys
-import types
 from hashlib import blake2b
 from math import sqrt
 import re
+import sys
+import types
+from typing import Any
 
 from app.core.config import settings
 
@@ -27,8 +28,6 @@ class LocalHashRagasEmbeddings:
         "refunded": ("refund", "return", "moneyback"),
         "return": ("refund", "returned"),
         "returned": ("return", "refund"),
-        "non": ("nonreturnable",),
-        "returnable": ("nonreturnable",),
         "software": ("downloadable", "digital", "product"),
         "downloadable": ("software", "digital"),
         "digital": ("software", "downloadable"),
@@ -36,8 +35,6 @@ class LocalHashRagasEmbeddings:
         "purchase": ("bought", "product"),
         "purchased": ("bought", "purchase", "product"),
         "products": ("product", "purchase"),
-        "item": ("product", "purchase"),
-        "items": ("item", "product", "purchase"),
         "cannot": ("not", "ineligible"),
         "eligible": ("eligibility", "returnable"),
         "ineligible": ("cannot", "not"),
@@ -61,24 +58,6 @@ class LocalHashRagasEmbeddings:
 
         return [value / magnitude for value in vector]
 
-    def _features(self, text: str) -> list[tuple[str, float]]:
-        normalized = text.lower()
-        tokens = self.TOKEN_PATTERN.findall(normalized)
-        features: list[tuple[str, float]] = []
-        for token in tokens:
-            features.append((f"tok:{token}", 1.0))
-            for synonym in self.SYNONYMS.get(token, ()):
-                features.append((f"tok:{synonym}", 0.9))
-            if token.endswith("s") and len(token) > 3:
-                features.append((f"tok:{token[:-1]}", 0.7))
-
-        compact = "".join(tokens)
-        for size in (3, 4, 5):
-            for index in range(max(0, len(compact) - size + 1)):
-                features.append((f"char:{compact[index:index + size]}", 0.2))
-
-        return features
-
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         return [self.embed_query(text) for text in texts]
 
@@ -93,6 +72,23 @@ class LocalHashRagasEmbeddings:
 
     async def aembed_documents(self, texts: list[str]) -> list[list[float]]:
         return self.embed_documents(texts)
+
+    def _features(self, text: str) -> list[tuple[str, float]]:
+        tokens = self.TOKEN_PATTERN.findall(text.lower())
+        features: list[tuple[str, float]] = []
+        for token in tokens:
+            features.append((f"tok:{token}", 1.0))
+            for synonym in self.SYNONYMS.get(token, ()):
+                features.append((f"tok:{synonym}", 0.9))
+            if token.endswith("s") and len(token) > 3:
+                features.append((f"tok:{token[:-1]}", 0.7))
+
+        compact = "".join(tokens)
+        for size in (3, 4, 5):
+            for index in range(max(0, len(compact) - size + 1)):
+                features.append((f"char:{compact[index:index + size]}", 0.2))
+
+        return features
 
 
 class RagasEvaluationService:
@@ -123,61 +119,133 @@ class RagasEvaluationService:
         retrieved_contexts: list[str],
         reference: str | None = None,
     ) -> dict[str, float]:
-        self._patch_optional_ragas_imports()
+        records = [
+            {
+                "user_input": user_input,
+                "retrieved_contexts": retrieved_contexts,
+                "response": response,
+                # Live triage calls do not have a golden reference, so use the
+                # final guarded response as the reference proxy. Offline runs
+                # pass real dataset references through evaluate_records().
+                "reference": reference or response,
+            }
+        ]
+        result = self.evaluate_records(records)
+        return self.extract_scores(result)
 
-        from ragas import SingleTurnSample
-        from ragas.metrics import (
-            Faithfulness,
-            LLMContextPrecisionWithoutReference,
-            LLMContextRecall,
-            ResponseRelevancy,
+    def evaluate_records(self, records: list[dict[str, Any]]):
+        self.patch_optional_ragas_imports()
+
+        from ragas import EvaluationDataset, evaluate
+
+        evaluator_llm = self.build_azure_evaluator_llm()
+        evaluator_embeddings = self.build_azure_evaluator_embeddings()
+        return evaluate(
+            dataset=EvaluationDataset.from_list(records),
+            metrics=self.build_ragas_metrics(evaluator_llm, evaluator_embeddings),
+            llm=evaluator_llm,
+            embeddings=evaluator_embeddings,
         )
 
-        sample = SingleTurnSample(
-            user_input=user_input,
-            response=response,
-            retrieved_contexts=retrieved_contexts,
-            reference=reference or response,
-        )
-
-        evaluator_llm = self._build_azure_evaluator_llm()
-        embeddings = LocalHashRagasEmbeddings()
-
-        metrics = {
-            "faithfulness": Faithfulness(),
-            "answer_relevancy": ResponseRelevancy(),
-            "context_precision": LLMContextPrecisionWithoutReference(),
-            "context_recall": LLMContextRecall(),
-        }
-        for metric in metrics.values():
-            if hasattr(metric, "llm"):
-                metric.llm = evaluator_llm
-            if hasattr(metric, "embeddings"):
-                metric.embeddings = embeddings
-
-        scores = {}
-        for metric_name, metric in metrics.items():
-            scores[metric_name] = float(metric.single_turn_score(sample))
-
-        return scores
-
-    def _build_azure_evaluator_llm(self):
-        self._patch_optional_ragas_imports()
+    def build_azure_evaluator_llm(self):
+        self.patch_optional_ragas_imports()
 
         from langchain_openai import AzureChatOpenAI
         from ragas.llms import LangchainLLMWrapper
 
-        evaluator_llm = AzureChatOpenAI(
+        chat_model = AzureChatOpenAI(
             api_version=settings.AZURE_OPENAI_API_VERSION,
             azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
             api_key=settings.AZURE_OPENAI_API_KEY,
             azure_deployment=settings.AZURE_OPENAI_DEPLOYMENT_NAME,
             temperature=0.0,
         )
-        return LangchainLLMWrapper(evaluator_llm)
+        return LangchainLLMWrapper(chat_model)
+
+    def build_azure_evaluator_embeddings(self):
+        self.patch_optional_ragas_imports()
+
+        if not settings.AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME:
+            return LocalHashRagasEmbeddings()
+
+        from langchain_openai import AzureOpenAIEmbeddings
+        from ragas.embeddings import LangchainEmbeddingsWrapper
+
+        embeddings = AzureOpenAIEmbeddings(
+            api_version=settings.AZURE_OPENAI_API_VERSION,
+            azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+            api_key=settings.AZURE_OPENAI_API_KEY,
+            azure_deployment=settings.AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME,
+        )
+        return LangchainEmbeddingsWrapper(embeddings)
+
+    def build_ragas_metrics(self, evaluator_llm=None, evaluator_embeddings=None):
+        self.patch_optional_ragas_imports()
+
+        try:
+            from ragas.metrics import (
+                Faithfulness,
+                LLMContextPrecisionWithReference,
+                LLMContextRecall,
+                ResponseRelevancy,
+            )
+
+            metrics = [
+                Faithfulness(),
+                ResponseRelevancy(),
+                LLMContextPrecisionWithReference(),
+                LLMContextRecall(),
+            ]
+        except ImportError:
+            from ragas.metrics import (
+                answer_relevancy,
+                context_precision,
+                context_recall,
+                faithfulness,
+            )
+
+            metrics = [
+                faithfulness,
+                answer_relevancy,
+                context_precision,
+                context_recall,
+            ]
+
+        for metric in metrics:
+            if evaluator_llm is not None and hasattr(metric, "llm"):
+                metric.llm = evaluator_llm
+            if evaluator_embeddings is not None and hasattr(metric, "embeddings"):
+                metric.embeddings = evaluator_embeddings
+
+        return metrics
 
     @staticmethod
-    def _patch_optional_ragas_imports() -> None:
+    def extract_scores(result) -> dict[str, float]:
+        try:
+            row = result.to_pandas().iloc[0].to_dict()
+        except AttributeError:
+            row = dict(result)
+
+        scores: dict[str, float] = {}
+        metric_aliases = {
+            "faithfulness": "faithfulness",
+            "answer_relevancy": "answer_relevancy",
+            "context_recall": "context_recall",
+            "llm_context_precision_with_reference": "context_precision",
+            "context_precision": "context_precision",
+        }
+        for result_name, score_name in metric_aliases.items():
+            if result_name not in row:
+                continue
+            try:
+                scores[score_name] = float(row[result_name])
+            except (TypeError, ValueError):
+                continue
+
+        return scores
+
+    @staticmethod
+    def patch_optional_ragas_imports() -> None:
         module_name = "langchain_community.chat_models.vertexai"
         if module_name in sys.modules:
             return
