@@ -47,21 +47,52 @@ The API reads credentials from `api/.env`. This file is **not committed** (it is
 cp api/.env.example api/.env   # if an example file exists, otherwise create it manually
 ```
 
-Create `api/.env` with the following content, replacing the placeholder values with your own:
+Create `api/.env` with the following content:
 
 ```env
-# Azure OpenAI credentials (required)
-AZURE_OPENAI_ENDPOINT=https://<your-resource>.cognitiveservices.azure.com/
-AZURE_OPENAI_API_KEY=<your-api-key>
+# AWS Secrets Manager source for Azure OpenAI credentials
+AWS_SECRET_NAME=dev-mayds-triage-agent
+AWS_REGION=eu-west-2
+AWS_SECRETS_REQUIRED=true
+AWS_SECRETS_OVERRIDE_ENV=true
+
+# Azure OpenAI model settings
 AZURE_OPENAI_API_VERSION=2025-01-01-preview
 AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4.1-mini
 
-# Database — path inside the container (volume-mounted to ./api/data/)
-DATABASE_URL=sqlite:///./data/triage.db
+# AWS RDS PostgreSQL database
+POSTGRES_HOST=db-dev-traige-agent-ds-may.c1i4cqwu4kdd.eu-west-2.rds.amazonaws.com
+POSTGRES_PORT=5432
+POSTGRES_DB=postgres
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=<your-rds-password>
 ```
 
-> **Where to find these values:**  
-> Log in to [Azure Portal](https://portal.azure.com) → your Azure OpenAI resource → Keys and Endpoint.
+The AWS secret named by `AWS_SECRET_NAME` must contain:
+
+```json
+{
+  "AZURE_OPENAI_ENDPOINT": "https://<your-resource>.openai.azure.com/",
+  "AZURE_OPENAI_API_KEY": "<your-api-key>"
+}
+```
+
+You can also put `AZURE_OPENAI_API_VERSION` and
+`AZURE_OPENAI_DEPLOYMENT_NAME` in the secret. When
+`AWS_SECRETS_OVERRIDE_ENV=true`, Azure OpenAI values from AWS Secrets Manager
+override matching local environment values.
+
+Docker Compose passes AWS credentials into the API container from the
+project-root `.env` file. Database settings live in `api/.env`.
+Set these before starting Docker:
+
+```env
+AWS_ACCESS_KEY_ID=<your-aws-access-key-id>
+AWS_SECRET_ACCESS_KEY=<your-aws-secret-access-key>
+AWS_SESSION_TOKEN=<your-session-token-if-using-temporary-credentials>
+AWS_REGION=eu-west-2
+```
+
 
 ---
 

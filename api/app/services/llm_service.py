@@ -99,7 +99,7 @@ class LLMService:
                     response_format=TriageResponse
                 )
                 generation.update(
-                    output=response.choices[0].message.parsed.model_dump()
+                    output=response.choices[0].message.parsed.model_dump(),
                     metadata={
                         "framework": "langchain",
                         "response_format": "TriageResponse",

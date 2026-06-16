@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     AZURE_OPENAI_API_KEY: Optional[str] = None
     AZURE_OPENAI_DEPLOYMENT_NAME: str = "gpt-4.1-mini"
 
-    DATABASE_URL: str = "sqlite:///./data/triage.db"
+    DATABASE_URL: Optional[str] = None
     POSTGRES_HOST: Optional[str] = None
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "postgres"

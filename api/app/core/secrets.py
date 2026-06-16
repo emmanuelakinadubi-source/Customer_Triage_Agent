@@ -14,13 +14,20 @@ REQUIRED_SECRET_KEYS = {
     "AZURE_OPENAI_API_KEY",
 }
 
-
-def _is_truthy_env_value(value: str | None) -> bool:
-    return value is not None and value.strip().lower() in {"1", "true", "yes", "on"}
+AZURE_OPENAI_SECRET_KEYS = {
+    "AZURE_OPENAI_ENDPOINT",
+    "AZURE_OPENAI_API_KEY",
+    "AZURE_OPENAI_API_VERSION",
+    "AZURE_OPENAI_DEPLOYMENT_NAME",
+}
 
 
 def _is_falsey_env_value(value: str | None) -> bool:
     return value is not None and value.strip().lower() in {"0", "false", "no", "off"}
+
+
+def _is_truthy_env_value(value: str | None) -> bool:
+    return value is not None and value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 @lru_cache(maxsize=1)
@@ -36,12 +43,12 @@ def get_aws_secret(secret_name: str, region_name: str) -> dict:
     return json.loads(secret_string)
 
 
-def _set_env_if_missing_or_empty(key: str, value: Any) -> None:
+def _set_env_value(key: str, value: Any, *, overwrite: bool) -> None:
     if value is None:
         return
 
     current_value = os.environ.get(key)
-    if current_value:
+    if current_value and not overwrite:
         return
 
     os.environ[key] = str(value)
@@ -51,10 +58,12 @@ def load_aws_secrets_into_env() -> None:
     secret_name = os.getenv("AWS_SECRET_NAME")
     region_name = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION") or "us-east-1"
     secrets_required = not _is_falsey_env_value(os.getenv("AWS_SECRETS_REQUIRED"))
+    overwrite_env = not _is_falsey_env_value(os.getenv("AWS_SECRETS_OVERRIDE_ENV"))
 
     if all(os.getenv(key) for key in REQUIRED_SECRET_KEYS):
-        logger.info("Required Azure OpenAI settings already present; skipping AWS Secrets Manager")
-        return
+        if not secret_name or not overwrite_env:
+            logger.info("Required Azure OpenAI settings already present; skipping AWS Secrets Manager")
+            return
 
     if not secret_name:
         logger.info("AWS_SECRET_NAME not set; using local environment/.env values")
@@ -63,6 +72,15 @@ def load_aws_secrets_into_env() -> None:
     try:
         secrets = get_aws_secret(secret_name, region_name)
     except (ClientError, BotoCoreError, json.JSONDecodeError) as exc:
+        if isinstance(exc, ClientError):
+            error_code = exc.response.get("Error", {}).get("Code")
+            if error_code == "ExpiredTokenException":
+                raise RuntimeError(
+                    f"Failed to load AWS secret {secret_name}: AWS credentials are expired. "
+                    "Refresh AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_SESSION_TOKEN "
+                    "in the project-root .env or in your shell, then restart Docker Compose."
+                ) from exc
+
         if not secrets_required:
             logger.warning(
                 "Could not load AWS secret %s from %s; continuing with local environment values: %s",
@@ -82,11 +100,15 @@ def load_aws_secrets_into_env() -> None:
         )
 
     for key, value in secrets.items():
-        # Existing non-empty environment variables win over Secrets Manager.
-        _set_env_if_missing_or_empty(key, value)
+        # Azure OpenAI credentials should come from Secrets Manager when configured.
+        _set_env_value(
+            key,
+            value,
+            overwrite=overwrite_env and key in AZURE_OPENAI_SECRET_KEYS,
+        )
 
     logger.info(
-        "Loaded application secrets from AWS Secrets Manager secret %s in %s",
+        "Loaded Azure OpenAI settings from AWS Secrets Manager secret %s in %s",
         secret_name,
         region_name,
     )

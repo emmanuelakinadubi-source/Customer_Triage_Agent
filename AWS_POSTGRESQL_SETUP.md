@@ -1,7 +1,8 @@
 # Move from SQLite to AWS RDS PostgreSQL
 
-This project now supports both local SQLite and AWS RDS PostgreSQL through the
-same `DATABASE_URL` setting.
+This project uses AWS RDS PostgreSQL for the API database. Local tests may use
+SQLite explicitly, but Docker/runtime configuration should use the `POSTGRES_*`
+settings below.
 
 ## 1. Get your RDS values
 
@@ -26,20 +27,18 @@ your public IP.
 
 ## 3. Update `api/.env`
 
-Replace the SQLite value:
+Set your RDS PostgreSQL values:
 
 ```env
-DATABASE_URL=sqlite:///./data/triage.db
+POSTGRES_HOST=YOUR_RDS_ENDPOINT
+POSTGRES_PORT=5432
+POSTGRES_DB=postgres
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=YOUR_PASSWORD
 ```
 
-with your RDS PostgreSQL URL:
-
-```env
-DATABASE_URL=postgresql+psycopg2://postgres:YOUR_PASSWORD@YOUR_RDS_ENDPOINT:5432/postgres?sslmode=require
-```
-
-If your password contains special characters such as `@`, `#`, `/`, `:`, or
-spaces, URL-encode it before putting it in the connection string.
+The app builds the SQLAlchemy connection string internally and requires SSL for
+PostgreSQL connections.
 
 Do not commit `api/.env`.
 
